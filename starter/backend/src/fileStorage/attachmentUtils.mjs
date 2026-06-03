@@ -7,7 +7,7 @@ export class AttachmentUtils {
       signatureVersion: 'v4'
     })
 
-    this.bucketName = process.env.ATTACHMENTS_S3_BUCKET
+    this.bucketName = process.env.ATTACHMENT_S3_BUCKET
     this.urlExpiration = Number(
       process.env.SIGNED_URL_EXPIRATION
     )

@@ -8,7 +8,9 @@ const jwksUrl = 'https://dev-mn31vngbkhgrjsbz.us.auth0.com/.well-known/jwks.json
 
 export async function handler(event) {
   try {
-    const jwtToken = await verifyToken(event.authorizationToken)
+    const jwtToken = await verifyToken(
+      event.authorizationToken
+    )
 
     return {
       principalId: jwtToken.sub,
@@ -24,7 +26,9 @@ export async function handler(event) {
       }
     }
   } catch (e) {
-    logger.error('User not authorized', { error: e.message })
+    logger.error('User not authorized', {
+      error: e.message
+    })
 
     return {
       principalId: 'user',
@@ -44,31 +48,63 @@ export async function handler(event) {
 
 async function verifyToken(authHeader) {
   const token = getToken(authHeader)
-  const jwt = jsonwebtoken.decode(token, { complete: true })
 
-  // TODO: Implement token verification
+  const jwt = jsonwebtoken.decode(
+    token,
+    { complete: true }
+  )
+
   if (!jwt) {
     throw new Error('Invalid token')
   }
+
   const response = await Axios.get(jwksUrl)
-  const signingKey = response.data.keys[0]
-  const cert = buildCertifivate(signingKey.x5c[0])
-  
-  return jsonwebtoken.verify(token, cert, { algorithms: ['RS256'] })
+
+  const signingKey =
+    response.data.keys.find(
+      key => key.kid === jwt.header.kid
+    )
+
+  if (!signingKey) {
+    throw new Error(
+      'Signing key not found'
+    )
+  }
+
+  const cert = buildCertificate(
+    signingKey.x5c[0]
+  )
+
+  return jsonwebtoken.verify(
+    token,
+    cert,
+    {
+      algorithms: ['RS256']
+    }
+  )
 }
 
 function getToken(authHeader) {
-  if (!authHeader) throw new Error('No authentication header')
+  if (!authHeader)
+    throw new Error(
+      'No authentication header'
+    )
 
-  if (!authHeader.toLowerCase().startsWith('bearer '))
-    throw new Error('Invalid authentication header')
+  if (
+    !authHeader
+      .toLowerCase()
+      .startsWith('bearer ')
+  )
+    throw new Error(
+      'Invalid authentication header'
+    )
 
   const split = authHeader.split(' ')
-  const token = split[1]
-
-  return token
+  return split[1]
 }
-function buildCertifivate(cert) {
-  return `-----BEGIN CERTIFICATE-----\n${cert}\n-----END CERTIFICATE-----\n`
 
+function buildCertificate(cert) {
+  return `-----BEGIN CERTIFICATE-----
+${cert}
+-----END CERTIFICATE-----`
 }

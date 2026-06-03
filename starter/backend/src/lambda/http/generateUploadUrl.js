@@ -1,40 +1,33 @@
-import middy from '@middy/core'
-import cors from '@middy/http-cors'
-import httpErrorHandler from '@middy/http-error-handler'
+import { generateUploadUrl }
+from '../../businessLogic/todos.mjs'
 
-import { getUserId } from '../../auth/utils.mjs'
+import { parseUserId }
+from '../../auth/utils.mjs'
 
-import {
-  generateUploadUrl
-} from '../../businessLogic/todos.mjs'
+export async function handler(event) {
+  const todoId =
+    event.pathParameters.todoId
 
-export const handler = middy()
-  .use(httpErrorHandler())
-  .use(
-    cors({
-      credentials: true
+  const authHeader =
+    event.headers.Authorization ||
+    event.headers.authorization
+
+  const userId =
+    parseUserId(authHeader)
+
+  const uploadUrl =
+    await generateUploadUrl(
+      todoId
+    )
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true
+    },
+    body: JSON.stringify({
+      uploadUrl
     })
-  )
-  .handler(async (event) => {
-    const todoId = event.pathParameters.todoId
-
-    const userId = getUserId(event)
-
-    console.log('Generating upload URL', {
-      todoId,
-      userId
-    })
-    console.log('User ID: ', userId)
-
-    const uploadUrl =
-      await generateUploadUrl(todoId)
-
-    return {
-      statusCode: 200,
-
-      body: JSON.stringify({
-        uploadUrl
-      })
-    }
-    console.log('Upload URL generated successfully')
-  })
+  }
+}

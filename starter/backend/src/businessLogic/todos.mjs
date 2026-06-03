@@ -1,5 +1,4 @@
-import { v4 as uuidv4 } from 'uuid'
-
+import crypto from 'crypto'
 import {
     createTodo as createTodoAccess,
     deleteTodo as deleteTodoAccess,
@@ -16,8 +15,7 @@ export async function getTodos(userId) {
 }
 
 export async function createTodo(createTodoRequest, userId) {
-  const todoId = uuidv4()
-
+  const todoId = crypto.randomUUID()
   const createdAt = new Date().toISOString()
 
   const attachmentUrl =

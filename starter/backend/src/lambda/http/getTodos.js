@@ -1,25 +1,38 @@
-import middy from '@middy/core'
-import httpCors from '@middy/http-cors'
-
-import { getUserId } from '../../auth/utils.mjs'
 import { getTodos } from '../../businessLogic/todos.mjs'
+import { parseUserId } from '../../auth/utils.mjs'
 
-async function getTodosHandler(event) {
-  const userId = getUserId(event)
+export async function handler(event) {
+  try {
+    const authHeader =
+      event.headers.Authorization ||
+      event.headers.authorization
 
-  const items = await getTodos(userId)
+    const userId = parseUserId(authHeader)
 
+    const todos = await getTodos(userId)
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      items
-    })
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
+      },
+      body: JSON.stringify({
+        items: todos || []
+      })
+    }
+  } catch (e) {
+    console.log('Error getting todos', e)
+
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
+      },
+      body: JSON.stringify({
+        error: e.message
+      })
+    }
   }
-  console.log('User ID: ', userId)
-  console.log('result: ', items)
-  console.log('todos retrieved successfully')
 }
-
-export const handler = middy(getTodosHandler)
-  .use(httpCors())

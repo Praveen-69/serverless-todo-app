@@ -1,4 +1,4 @@
-service: serverless-todo-app-79dckjbsdiv
+service: serverless-todo-app
 
 plugins:
   - serverless-iam-roles-per-function
@@ -8,20 +8,27 @@ frameworkVersion: '3'
 provider:
   name: aws
   runtime: nodejs18.x
-
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
 
+  tracing:
+    lambda: true
+    apiGateway: true
+
   environment:
-    TODOS_TABLE: Todos-${self:provider.stage}-${aws:accountId}-anji391842816krisighr
-    TODOS_CREATED_AT_INDEX: CreatedAtIndex-${aws:accountId}-gidnxaofuobd
-    ATTACHMENTS_S3_BUCKET: ${self:service}-attachments-${self:provider.stage}-ge
+    TODOS_TABLE: Todos-${self:provider.stage}
+    TODOS_CREATED_AT_INDEX: CreatedAtIndex
+    ATTACHMENT_S3_BUCKET: attachmentsbucket-ashhh
+    SIGNED_URL_EXPIRATION: 300
+    AUTH0_DOMAIN: dev-ohckrbu2z0rmvpbp.us.auth0.com
+    AUTH0_AUDIENCE: https://fu92pm0wi4.execute-api.us-east-1.amazonaws.com/dev
 
 functions:
 
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
+  # TODO: Configure this function
   GetTodos:
     handler: src/lambda/http/getTodos.handler
     events:
@@ -30,14 +37,14 @@ functions:
           path: todos
           cors: true
           authorizer: Auth
-    iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
-        Action:
+        Action: 
           - dynamodb:Query
-        Resource:
+        Resource: 
           - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
-
+  
+  # TODO: Configure this function
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
     events:
@@ -46,14 +53,14 @@ functions:
           path: todos
           cors: true
           authorizer: Auth
-    iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
-        Action:
+        Action: 
           - dynamodb:PutItem
-        Resource:
+        Resource: 
           - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
 
+  # TODO: Configure this function
   UpdateTodo:
     handler: src/lambda/http/updateTodo.handler
     events:
@@ -62,14 +69,14 @@ functions:
           path: todos/{todoId}
           cors: true
           authorizer: Auth
-    iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
-        Action:
+        Action: 
           - dynamodb:UpdateItem
-        Resource:
+        Resource: 
           - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
 
+  # TODO: Configure this function
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
     events:
@@ -78,14 +85,14 @@ functions:
           path: todos/{todoId}
           cors: true
           authorizer: Auth
-    iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
-        Action:
+        Action: 
           - dynamodb:DeleteItem
-        Resource:
+        Resource: 
           - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
 
+  # TODO: Configure this function
   GenerateUploadUrl:
     handler: src/lambda/http/generateUploadUrl.handler
     events:
@@ -94,17 +101,22 @@ functions:
           path: todos/{todoId}/attachment
           cors: true
           authorizer: Auth
-    iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
-        Action:
+        Action: 
+          - dynamodb:UpdateItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+      - Effect: Allow
+        Action: 
           - s3:PutObject
         Resource:
-          - !Sub arn:aws:s3:::${AttachmentsBucket}/*
+          - arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*
+
 
 resources:
   Resources:
-
+    # TODO: Add any necessary AWS resources
     TodosTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -128,29 +140,37 @@ resources:
 
         LocalSecondaryIndexes:
           - IndexName: ${self:provider.environment.TODOS_CREATED_AT_INDEX}
+
             KeySchema:
               - AttributeName: userId
                 KeyType: HASH
               - AttributeName: createdAt
                 KeyType: RANGE
+
             Projection:
               ProjectionType: ALL
-
+    
     AttachmentsBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: ${self:provider.environment.ATTACHMENTS_S3_BUCKET}
+        BucketName: attachmentsbucket-ashhh
+        PublicAccessBlockConfiguration:
+          BlockPublicPolicy: false
         CorsConfiguration:
           CorsRules:
-            - AllowedMethods:
-                - PUT
-                - GET
-              AllowedOrigins:
-                - "*"
+            - AllowedOrigins:
+                - '*'
               AllowedHeaders:
-                - "*"
-
-    AttachmentsBucketPolicy:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              MaxAge: 3000
+    
+    BucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
         Bucket: !Ref AttachmentsBucket
@@ -158,18 +178,19 @@ resources:
           Version: '2012-10-17'
           Statement:
             - Effect: Allow
-              Principal: "*"
+              Principal: '*'
               Action:
                 - s3:GetObject
               Resource:
-                - !Sub arn:aws:s3:::${AttachmentsBucket}/*
+                - arn:aws:s3:::attachmentsbucket-ashhh/*
 
     GatewayResponseDefault4XX:
       Type: AWS::ApiGateway::GatewayResponse
-      Properties:
+      Properties: 
         ResponseType: DEFAULT_4XX
         RestApiId:
           Ref: ApiGatewayRestApi
         ResponseParameters:
           gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
           gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+            

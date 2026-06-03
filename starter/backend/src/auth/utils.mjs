@@ -1,22 +1,29 @@
-import { decode } from 'jsonwebtoken'
-import { createLogger } from '../utils/logger.mjs'
+import jwt from 'jsonwebtoken'
 
-const logger = createLogger('utils')
-/**
- * Parse a JWT token and return a user id
- * @param jwtToken JWT token to parse
- * @returns a user id from the JWT token
- */
-export function parseUserId(jwtToken) {
-  const decodedJwt = decode(jwtToken)
+export function parseUserId(authHeader) {
+  const token = getToken(authHeader)
+
+  const decodedJwt = jwt.decode(token)
+
   return decodedJwt.sub
 }
-export function getUserId(event) {
-  const authorization = event.headers.Authorization || event.headers.authorization
-  if (!authorization) {
-    throw new Error('No authentication header')
+
+function getToken(authHeader) {
+  if (!authHeader)
+    throw new Error(
+      'No authentication header'
+    )
+
+  if (
+    !authHeader
+      .toLowerCase()
+      .startsWith('bearer ')
+  ) {
+    throw new Error(
+      'Invalid authentication header'
+    )
   }
-  const split = authorization.split(' ')
-  const jwtToken = split[1]
-  return parseUserId(jwtToken)
-} 
+
+  const split = authHeader.split(' ')
+  return split[1]
+}

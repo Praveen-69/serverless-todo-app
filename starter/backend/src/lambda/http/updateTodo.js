@@ -1,21 +1,22 @@
-import middy from '@middy/core'
-import httpCors from '@middy/http-cors'
-import httpJsonBodyParser from '@middy/http-json-body-parser'
+import { updateTodo }
+from '../../businessLogic/todos.mjs'
 
-import { getUserId } from '../../auth/utils.mjs'
+import { parseUserId }
+from '../../auth/utils.mjs'
 
-import {
-  updateTodo
-} from '../../businessLogic/todos.mjs'
+export async function handler(event) {
+  const todoId =
+    event.pathParameters.todoId
 
-async function updateTodoHandler(event) {
-  const todoId = event.pathParameters.todoId
+  const updatedTodo =
+    JSON.parse(event.body)
 
-  const updatedTodo = event.body
+  const authHeader =
+    event.headers.Authorization ||
+    event.headers.authorization
 
-  const userId = getUserId(event)
-
-  console.log('Updating item', todoId)
+  const userId =
+    parseUserId(authHeader)
 
   await updateTodo(
     userId,
@@ -23,18 +24,12 @@ async function updateTodoHandler(event) {
     updatedTodo
   )
 
-  console.log('User ID: ', userId)
-  console.log('result: ', items)
-  console.log('todo updated successfully')
-
   return {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: 'Todo updated'
-    })
+    statusCode: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true
+    },
+    body: ''
   }
 }
-
-export const handler = middy(updateTodoHandler)
-  .use(httpJsonBodyParser())
-  .use(httpCors())
